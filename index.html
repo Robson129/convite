@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Uma pergunta 💌</title>
+<meta name="theme-color" content="#ff4d8d">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pergunta">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #ffe3ee 0%, #ffc2d9 55%, #ff9fc2 100%);
+    color: #4a1530; display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+    user-select: none; -webkit-user-select: none;
+  }
+  .screen { width: 100%; max-width: 420px; text-align: center; }
+  .hidden { display: none !important; }
+  .gif { font-size: 96px; line-height: 1; margin-bottom: 18px; animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-10px) rotate(-4deg); } }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -.5px; margin-bottom: 10px; }
+  p.sub { font-size: 17px; opacity: .8; margin-bottom: 34px; min-height: 24px; }
+  .buttons { display: flex; gap: 16px; justify-content: center; align-items: center; min-height: 80px; }
+  button {
+    font: inherit; font-weight: 700; border: none; border-radius: 999px; cursor: pointer;
+    padding: 14px 34px; font-size: 19px; transition: transform .2s, padding .25s, font-size .25s;
+  }
+  #yes { background: #ff2e7e; color: #fff; box-shadow: 0 8px 24px rgba(255,46,126,.45); }
+  #yes:active { transform: scale(.95); }
+  #no { background: #fff; color: #ff2e7e; box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+  #no.fugitive { position: fixed; z-index: 10; transition: left .18s ease-out, top .18s ease-out, transform .2s; }
+  .card { background: rgba(255,255,255,.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 24px; padding: 24px; margin-top: 8px; text-align: left; }
+  .card label { display: block; font-weight: 700; font-size: 14px; margin: 14px 0 8px; }
+  .card label:first-child { margin-top: 0; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { padding: 10px 14px; font-size: 15px; background: #fff; color: #4a1530; box-shadow: none; border: 2px solid transparent; }
+  .opt.sel { border-color: #ff2e7e; background: #ffe3ee; }
+  input[type=datetime-local] { width: 100%; font: inherit; padding: 12px; border-radius: 14px; border: 2px solid #ffc2d9; background: #fff; color: #4a1530; }
+  .full { width: 100%; margin-top: 22px; }
+  .heart { position: fixed; top: -40px; pointer-events: none; animation: fall linear forwards; z-index: 0; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: .2; } }
+  .final h1 { font-size: 34px; }
+  .summary { font-size: 18px; line-height: 1.6; margin: 18px 0 26px; }
+  .link { background: none; color: #4a1530; box-shadow: none; font-size: 14px; opacity: .6; padding: 8px; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Tela 1: a pergunta -->
+<section class="screen" id="s-ask">
+  <div class="gif" id="emoji">🥺</div>
+  <h1 id="title">Quer sair comigo?</h1>
+  <p class="sub" id="sub">Prometo que não vou falar de JavaScript o tempo todo</p>
+  <div class="buttons">
+    <button id="yes">Sim 💖</button>
+    <button id="no">Não</button>
+  </div>
+</section>
+
+<!-- Tela 2: detalhes -->
+<section class="screen hidden" id="s-plan">
+  <div class="gif">🥰</div>
+  <h1>Sabia!!</h1>
+  <p class="sub" style="margin-bottom:12px">Agora escolhe os detalhes:</p>
+  <div class="card">
+    <label>Onde?</label>
+    <div class="opts" data-group="place">
+      <button class="opt">🍣 Japonês</button>
+      <button class="opt">🍕 Pizza</button>
+      <button class="opt">🍔 Hambúrguer</button>
+      <button class="opt">🍝 Italiano</button>
+      <button class="opt">🎬 Cinema</button>
+      <button class="opt">🍦 Sorvete</button>
+    </div>
+    <label>Quando?</label>
+    <input type="datetime-local" id="when">
+    <button class="full" id="confirm" style="background:#ff2e7e;color:#fff">Confirmar 💌</button>
+  </div>
+</section>
+
+<!-- Tela 3: confirmação -->
+<section class="screen final hidden" id="s-done">
+  <div class="gif">💘</div>
+  <h1>Tá marcado!</h1>
+  <div class="summary" id="summary"></div>
+  <button class="full" id="share" style="background:#ff2e7e;color:#fff">Me avisar 📲</button>
+  <button class="link" id="restart">recomeçar</button>
+</section>
+
+<script>
+  // Personalize com ?nome=Ana na URL
+  const params = new URLSearchParams(location.search);
+  const nome = params.get('nome');
+  if (nome) document.getElementById('title').textContent = `${nome}, quer sair comigo?`;
+
+  const $ = id => document.getElementById(id);
+  const yes = $('yes'), no = $('no'), sub = $('sub'), emoji = $('emoji');
+
+  const falas = [
+    ['Tem certeza? 🤨', '😳'],
+    ['Pensa bem...', '🥺'],
+    ['Eu sei fazer café', '☕'],
+    ['Eu conserto seu Wi-Fi', '📶'],
+    ['Formato seu PC de graça', '💻'],
+    ['Faço um app só pra você (já fiz)', '📱'],
+    ['Esse botão tá com bug, tenta o outro', '🐛'],
+    ['Erro 404: "não" não encontrado', '🚫'],
+    ['Vou chorar em produção', '😭'],
+    ['Tá bom, só aperta o Sim logo', '🙏'],
+  ];
+  let tentativas = 0;
+
+  function foge(e) {
+    if (e) e.preventDefault();
+    const r = no.getBoundingClientRect();
+    if (!no.classList.contains('fugitive')) {
+      no.style.left = r.left + 'px'; no.style.top = r.top + 'px';
+      no.classList.add('fugitive');
+    }
+    const pad = 16, w = r.width, h = r.height;
+    const maxX = innerWidth - w - pad, maxY = innerHeight - h - pad;
+    const y = yes.getBoundingClientRect();
+    let x, yy, tries = 0;
+    do {
+      x = pad + Math.random() * (maxX - pad);
+      yy = pad + Math.random() * (maxY - pad);
+      tries++;
+    } while (tries < 30 && Math.abs(x - r.left) + Math.abs(yy - r.top) < 120 ||
+             (tries < 30 && x + w > y.left - 10 && x < y.right + 10 && yy + h > y.top - 10 && yy < y.bottom + 10));
+    requestAnimationFrame(() => { no.style.left = x + 'px'; no.style.top = yy + 'px'; });
+
+    const [t, em] = falas[Math.min(tentativas, falas.length - 1)];
+    sub.textContent = t; emoji.textContent = em;
+    tentativas++;
+    const s = Math.min(1 + tentativas * 0.12, 2.2);
+    yes.style.transform = `scale(${s})`;
+    no.style.transform = `scale(${Math.max(1 - tentativas * 0.06, 0.55)})`;
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+  no.addEventListener('pointerenter', foge);
+  no.addEventListener('touchstart', foge, { passive: false });
+  no.addEventListener('click', foge);
+
+  function chuva(n = 40) {
+    const set = ['💖','💕','💘','💗','✨','🥰'];
+    for (let i = 0; i < n; i++) {
+      const el = document.createElement('div');
+      el.className = 'heart';
+      el.textContent = set[Math.floor(Math.random() * set.length)];
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.fontSize = 18 + Math.random() * 26 + 'px';
+      el.style.animationDuration = 2.5 + Math.random() * 3 + 's';
+      el.style.animationDelay = Math.random() * 1.2 + 's';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 7000);
+    }
+  }
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    $(id).classList.remove('hidden');
+  }
+
+  yes.addEventListener('click', () => {
+    no.classList.remove('fugitive'); no.style.cssText = '';
+    no.style.display = 'none';
+    chuva(); show('s-plan');
+    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+  });
+
+  let lugar = null;
+  document.querySelectorAll('[data-group="place"] .opt').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-group="place"] .opt').forEach(o => o.classList.remove('sel'));
+    b.classList.add('sel'); lugar = b.textContent;
+  }));
+
+  // Sugere o próximo sábado às 20h
+  const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); d.setHours(20, 0, 0, 0);
+  $('when').value = new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  let texto = '';
+  $('confirm').addEventListener('click', () => {
+    if (!lugar) { $('confirm').textContent = 'Escolhe o lugar primeiro 👆'; return; }
+    const quando = new Date($('when').value);
+    const fmt = quando.toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' });
+    $('summary').innerHTML = `${lugar}<br>${fmt}`;
+    texto = `Aceito sair com você 💖 ${lugar} — ${fmt}`;
+    chuva(60); show('s-done');
+  });
+
+  $('share').addEventListener('click', async () => {
+    if (navigator.share) { try { await navigator.share({ text: texto }); } catch {} }
+    else location.href = 'https://wa.me/?text=' + encodeURIComponent(texto);
+  });
+
+  $('restart').addEventListener('click', () => location.reload());
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
